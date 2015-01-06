@@ -1,0 +1,35 @@
+from scrapy.spider import Spider
+from scrapy.selector import HtmlXPathSelector
+import pymongo
+from academic.items import UserItem
+from academic.store import csdn
+
+
+class UserSpider(Spider):
+    
+    name = "user"
+    allowed_domains = ["blog.csdn.net"]
+    start_urls = []
+
+    for i in range(1,100):
+        start_urls.append("http://blog.csdn.net/hot.html?page=" + str(i))
+
+    def parse(self, response):
+      hxs = HtmlXPathSelector(response)
+      
+      user_collection = csdn.user_collection
+
+      blog_list = hxs.xpath('//div[@class="about_info"]')
+      for each_blog in blog_list:
+
+         username = ''.join(each_blog.xpath('./span/a[1]/text()').extract())
+         url = ''.join(each_blog.xpath('./span/a[1]/@href').extract())
+         user_item = UserItem()
+         
+         user_item['username'] = username
+         user_item['url'] = url
+
+         
+
+         spec = { "username": user_item['username'] }
+         user_collection.update(spec, {'$set': dict(user_item)}, upsert=True)
